@@ -35,6 +35,20 @@ Every autocapture event type is turned on explicitly in `src/main.js`:
 A custom `Form Submitted` event is also sent on submit. **This is a demo, so the actual form
 values (name, phone, address) are sent as event properties with no PII scrubbing.**
 
+## Pages & identity flow
+
+- **Home** (`index.html` / `src/main.js`) initializes the SDK with **no `userId`** — home-screen
+  events are anonymous.
+- On **Submit**, the app computes `userId = SHA-256(name)` (Web Crypto), calls
+  `amplitude.setUserId(...)`, sends the `Form Submitted` event, stashes the submission in
+  `sessionStorage`, flushes, and redirects to the confirmation page.
+- **Confirmation** (`confirmation.html` / `src/confirmation.js`) initializes the SDK **with** that
+  `userId` (so its first autocapture page-view already carries it) and displays the submitted
+  name / phone / address plus the hashed `userId`.
+
+So the `userId` is populated in analytics events **only after** the form is submitted. Shared SDK
+setup lives in `src/amplitude.js` (`initAmplitude`, `sha256Hex`).
+
 ## Run locally
 
 Requires Node 18+.

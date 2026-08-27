@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Submission Confirmed</title>
+  </head>
+  <body>
+    <main class="card">
+      <h1 id="confirmation-title">Submission received ✅</h1>
+      <p class="subtitle">Thanks — here's what you submitted.</p>
+
+      <dl id="submission-details" class="details" hidden>
+        <div class="detail-row">
+          <dt>Name</dt>
+          <dd id="detail-name"></dd>
+        </div>
+        <div class="detail-row">
+          <dt>Phone number</dt>
+          <dd id="detail-phone"></dd>
+        </div>
+        <div class="detail-row">
+          <dt>Address</dt>
+          <dd id="detail-address"></dd>
+        </div>
+        <div class="detail-row">
+          <dt>Amplitude userId (SHA-256 of name)</dt>
+          <dd><code id="detail-userid" class="userid"></code></dd>
+        </div>
+      </dl>
+
+      <p id="no-submission" class="no-submission" hidden>
+        No submission found. Please fill out the form first.
+      </p>
+
+      <a id="back-link" class="back-link" href="./">← Back to the form</a>
+    </main>
+
+    <script type="module" src="/src/confirmation.js"></script>
+  </body>
+</html>

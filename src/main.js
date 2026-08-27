@@ -1,11 +1,5 @@
 import './style.css';
-import * as amplitude from '@amplitude/unified';
-import { initAll } from '@amplitude/unified';
-
-const AMPLITUDE_API_KEY = 'c1efd7cc6f8506e760254e4e9342652f';
-
-// Expose the Unified SDK for easy console access during the demo (e.g. amplitude.track(...)).
-window.amplitude = amplitude;
+import { amplitude, initAmplitude, sha256Hex, SUBMISSION_STORAGE_KEY } from './amplitude.js';
 
 // Optional Web Experiment flag. If a flag with this key exists in the Amplitude
 // project, its variant drives the subtitle text; otherwise we fall back gracefully.
@@ -19,40 +13,15 @@ function logStatus(message) {
   statusList?.appendChild(li);
 }
 
-/**
- * Initialize the Amplitude Unified SDK: Analytics (with ALL autocapture events),
- * Session Replay, Web Experiment, and Guides & Surveys — all on one API key.
- */
-initAll(AMPLITUDE_API_KEY, {
-  analytics: {
-    // Every autocapture event type enabled explicitly (AutocaptureOptions).
-    autocapture: {
-      attribution: true,
-      fileDownloads: true,
-      formInteractions: true,
-      pageViews: true,
-      sessions: true,
-      elementInteractions: true,
-      frustrationInteractions: true, // rage clicks / dead clicks
-      networkTracking: true,
-      webVitals: true,
-      performanceTracking: true,
-    },
-  },
-  // Session Replay: capture 100% of sessions for the demo.
-  sessionReplay: {
-    sampleRate: 1,
-  },
-  // Web Experiment: boots the experiment client on the same key.
-  experiment: {},
-  // Guides & Surveys (engagement): boots and auto-renders anything targeted to this project.
-  engagement: {},
-});
+// Initialize WITHOUT a userId: events on the home screen are intentionally anonymous
+// until the user submits the form.
+initAmplitude();
 
 logStatus('Analytics initialized — all autocapture events enabled');
 logStatus('Session Replay initialized — 100% sample rate');
 logStatus('Web Experiment client initialized');
 logStatus('Guides & Surveys (engagement) initialized');
+logStatus('userId: not set (populated only after form submit)');
 
 // --- Web Experiment demonstration ------------------------------------------
 // Read a variant and let it drive the subtitle. The <h1> stays "Welcome, Natalie".
@@ -82,23 +51,35 @@ logStatus('Guides & Surveys (engagement) initialized');
 
 // --- Form submission --------------------------------------------------------
 const form = document.getElementById('demo-form');
-const confirmation = document.getElementById('form-confirmation');
+const submitBtn = document.getElementById('submit-btn');
 
-form?.addEventListener('submit', (event) => {
+form?.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (submitBtn) submitBtn.disabled = true;
 
   const name = document.getElementById('name')?.value ?? '';
   const phone = document.getElementById('phone')?.value ?? '';
   const address = document.getElementById('address')?.value ?? '';
 
-  // Demo app: track the actual field values as event properties (no PII scrubbing).
-  amplitude.track('Form Submitted', {
-    name,
-    phone,
-    address,
-  });
+  // Derive the userId as the SHA-256 hash of the name input, and identify the user.
+  // From this point on, analytics events carry this userId.
+  const userId = await sha256Hex(name);
+  amplitude.setUserId(userId);
 
-  if (confirmation) {
-    confirmation.hidden = false;
+  // Demo app: track the actual field values as event properties (no PII scrubbing).
+  amplitude.track('Form Submitted', { name, phone, address });
+
+  // Stash the submission so the confirmation page can read it back after navigation.
+  sessionStorage.setItem(
+    SUBMISSION_STORAGE_KEY,
+    JSON.stringify({ name, phone, address, userId }),
+  );
+
+  // Flush so the event isn't lost to the page navigation, then redirect.
+  try {
+    await amplitude.flush?.();
+  } catch (err) {
+    console.warn('[demo] flush failed:', err);
   }
+  window.location.assign(`${import.meta.env.BASE_URL}confirmation.html`);
 });
