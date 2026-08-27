@@ -1,0 +1,17 @@
+{
+  "name": "autocapture-test-project",
+  "version": "1.0.0",
+  "description": "Demo web app showcasing the Amplitude Unified SDK (Analytics + autocapture, Session Replay, Web Experiment, Guides & Surveys).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@amplitude/unified": "^1.1.31"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}

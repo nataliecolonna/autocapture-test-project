@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Welcome, Natalie</title>
+  </head>
+  <body>
+    <main class="card">
+      <h1 id="welcome-title">Welcome, Natalie</h1>
+      <p id="subtitle" class="subtitle">A tiny demo app — the real star is the Amplitude Unified SDK running underneath.</p>
+
+      <form id="demo-form" novalidate>
+        <div class="field">
+          <label for="name">Name</label>
+          <input id="name" name="name" type="text" autocomplete="name" placeholder="Natalie Colonna" />
+        </div>
+
+        <div class="field">
+          <label for="phone">Phone number</label>
+          <input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567" />
+        </div>
+
+        <div class="field">
+          <label for="address">Address</label>
+          <input id="address" name="address" type="text" autocomplete="street-address" placeholder="123 Demo St, San Francisco, CA" />
+        </div>
+
+        <button id="submit-btn" type="submit">Submit</button>
+      </form>
+
+      <p id="form-confirmation" class="confirmation" hidden>Thanks! Your info was submitted (and tracked in Amplitude).</p>
+
+      <section class="status" aria-live="polite">
+        <h2>Amplitude Unified SDK status</h2>
+        <ul id="sdk-status"></ul>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
