@@ -1,52 +1,65 @@
 import './style.css';
-import { amplitude, initAmplitude, sha256Hex, SUBMISSION_STORAGE_KEY } from './amplitude.js';
+import {
+  amplitude,
+  getSdkStatus,
+  initAmplitude,
+  sha256Hex,
+  startFeatureExperiment,
+  SUBMISSION_STORAGE_KEY,
+} from './amplitude.js';
 
-// Optional Web Experiment flag. If a flag with this key exists in the Amplitude
+// Optional Feature Experiment flag. If a flag with this key exists in the Amplitude
 // project, its variant drives the subtitle text; otherwise we fall back gracefully.
 const EXPERIMENT_FLAG_KEY = 'welcome-demo-cta';
 
 const statusList = document.getElementById('sdk-status');
 
-function logStatus(message) {
-  const li = document.createElement('li');
-  li.textContent = message;
-  statusList?.appendChild(li);
+function renderStatus(rows) {
+  if (!statusList) return;
+  statusList.replaceChildren(
+    ...rows.map(({ name, state, detail }) => {
+      const li = document.createElement('li');
+      li.className = `status-${state}`;
+      const label = document.createElement('strong');
+      label.textContent = `${name}: `;
+      li.append(label, detail);
+      return li;
+    }),
+  );
 }
+
+renderStatus([{ name: 'Checking', state: 'info', detail: 'waiting for the Unified SDK to initialize…' }]);
 
 // Initialize WITHOUT a userId: events on the home screen are intentionally anonymous
 // until the user submits the form.
-initAmplitude();
+const sdkReady = initAmplitude();
 
-logStatus('Analytics initialized — all autocapture events enabled');
-logStatus('Session Replay initialized — 100% sample rate');
-logStatus('Web Experiment client initialized');
-logStatus('Guides & Surveys (engagement) initialized');
-logStatus('userId: not set (populated only after form submit)');
-
-// --- Web Experiment demonstration ------------------------------------------
-// Read a variant and let it drive the subtitle. The <h1> stays "Welcome, Natalie".
-(async function applyExperiment() {
-  const subtitle = document.getElementById('subtitle');
+// Wait for every plugin, start Feature Experiment, then report what is actually running.
+(async function bootAndReport() {
   try {
-    // Fetch the latest variants if the client exposes fetch() (no-op if unavailable).
-    if (typeof amplitude.experiment?.fetch === 'function') {
-      await amplitude.experiment.fetch();
-    }
-    const variant = amplitude.experiment?.variant?.(EXPERIMENT_FLAG_KEY);
-    const payloadText =
-      (variant && (variant.payload?.subtitle || variant.value)) || null;
-
-    if (payloadText && subtitle) {
-      subtitle.textContent = payloadText;
-      logStatus(`Experiment "${EXPERIMENT_FLAG_KEY}" applied variant: ${variant.value ?? 'payload'}`);
-    } else {
-      logStatus(`Experiment "${EXPERIMENT_FLAG_KEY}" not configured — showing default subtitle`);
-    }
+    await sdkReady;
   } catch (err) {
-    logStatus('Experiment lookup skipped (no flag configured)');
-    // Non-fatal: the demo works with or without an experiment flag.
-    console.warn('[demo] experiment lookup failed:', err);
+    console.warn('[demo] initAll failed:', err);
   }
+
+  const experimentResult = await startFeatureExperiment();
+  if (experimentResult.error) {
+    console.warn('[demo] Feature Experiment start failed:', experimentResult.error);
+  }
+
+  // Let the experiment variant (if any) drive the subtitle. The <h1> stays "Welcome, Natalie".
+  const variant = experimentResult.client?.variant(EXPERIMENT_FLAG_KEY);
+  const subtitleText = variant?.payload?.subtitle || variant?.value;
+  const subtitle = document.getElementById('subtitle');
+  if (subtitleText && subtitle) subtitle.textContent = subtitleText;
+
+  const rows = getSdkStatus(experimentResult);
+  rows.push({
+    name: `Flag "${EXPERIMENT_FLAG_KEY}"`,
+    state: 'info',
+    detail: variant?.value ? `variant "${variant.value}" applied to subtitle` : 'no variant — showing default subtitle',
+  });
+  renderStatus(rows);
 })();
 
 // --- Form submission --------------------------------------------------------

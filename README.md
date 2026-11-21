@@ -4,29 +4,51 @@ A deliberately tiny web app (a "Welcome, Natalie" screen plus a name / phone / a
 whose real purpose is to demonstrate a **full [Amplitude Unified SDK](https://amplitude.com/docs)
 integration**:
 
-| Product | Package (bundled by `@amplitude/unified`) | Where it's wired |
+| Product | Delivered by | Where it's wired |
 | --- | --- | --- |
-| **Analytics + autocapture** | `@amplitude/analytics-browser` | `analytics.autocapture` in `src/main.js` |
-| **Session Replay** | `@amplitude/plugin-session-replay-browser` | `sessionReplay` in `src/main.js` |
-| **Web Experiment** | `@amplitude/plugin-experiment-browser` | `experiment` in `src/main.js` |
-| **Guides & Surveys** | `@amplitude/engagement-browser` | `engagement` in `src/main.js` |
+| **Analytics + autocapture** | `@amplitude/unified` → `analytics-browser` | `analytics` in `src/amplitude.js` |
+| **Session Replay** | `@amplitude/unified` → `plugin-session-replay-browser` | `sessionReplay` in `src/amplitude.js` |
+| **Feature Experiment** | `@amplitude/unified` → `plugin-experiment-browser` | `experiment` + `startFeatureExperiment()` in `src/amplitude.js` |
+| **Web Experiment** | Amplitude script tag (not in the npm package) | `<API_KEY>.experiment.js` first in `<head>` of both HTML pages |
+| **Guides & Surveys** | `@amplitude/unified` → `engagement-browser` (loads its SDK from Amplitude's CDN) | `engagement` in `src/amplitude.js` |
 
-Everything boots from a single call:
+The npm products boot from a single call (`initAmplitude()` in `src/amplitude.js`):
 
 ```js
 import { initAll } from '@amplitude/unified';
 
-initAll('c1efd7cc6f8506e760254e4e9342652f', {
+await initAll('c1efd7cc6f8506e760254e4e9342652f', {
   analytics: { autocapture: { /* all event types true */ } },
   sessionReplay: { sampleRate: 1 },
-  experiment: {},
+  experiment: { throwOnError: true },
   engagement: {},
 });
+await amplitude.experiment().start(); // the plugin creates the client but never fetches on its own
 ```
+
+Gotchas this app handles:
+
+- In the Unified SDK, `amplitude.experiment()` and `amplitude.sessionReplay()` are **methods**.
+- The experiment plugin does not fetch flags until `start()`/`fetch()` is called.
+- Web Experiment ships as a separate script tag, not as part of `@amplitude/unified`.
+- Session Replay's local `sampleRate` is **overridden** by the project's Session Replay settings
+  (remote config). If capture is off there, nothing records.
+
+### SDK status panel
+
+The "Amplitude Unified SDK status" panel on the home page checks each product at runtime
+(`getSdkStatus()` in `src/amplitude.js`) rather than printing fixed text:
+
+- **Analytics**: device and session ID present.
+- **Session Replay**: recording only if it attaches a `[Amplitude] Session Replay ID` to events.
+- **Feature Experiment**: `start()` succeeded, plus the number of variants assigned.
+- **Web Experiment**: `window.webExperiment` was defined by the script.
+- **Guides & Surveys**: its CDN bundle actually loaded. `window.engagement` is a catch-all stub
+  until then, so the panel can't rely on it.
 
 ## All autocapture events enabled
 
-Every autocapture event type is turned on explicitly in `src/main.js`:
+Every autocapture event type is turned on explicitly in `src/amplitude.js`:
 
 `attribution`, `fileDownloads`, `formInteractions`, `pageViews`, `sessions`,
 `elementInteractions`, `frustrationInteractions` (rage/dead clicks), `networkTracking`,

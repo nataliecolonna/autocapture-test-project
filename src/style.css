@@ -169,7 +169,25 @@ button:hover {
 }
 
 #sdk-status li::before {
+  font-weight: 700;
+}
+
+#sdk-status li.status-ok::before {
   content: "✓ ";
   color: var(--ok);
-  font-weight: 700;
+}
+
+#sdk-status li.status-warn::before {
+  content: "⚠ ";
+  color: #d97706;
+}
+
+#sdk-status li.status-fail::before {
+  content: "✗ ";
+  color: #dc2626;
+}
+
+#sdk-status li.status-info::before {
+  content: "• ";
+  color: var(--muted);
 }
